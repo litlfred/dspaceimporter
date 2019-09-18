@@ -4,9 +4,10 @@
 
 $collection = 'mhealthevidence';
 
-$dbhost = '127.0.0.1';
+#$dbhost = '127.0.0.1';
+$dbhost = 'localhost';
 $dbuser = 'root';
-$dbpass = 'opalopal';
+$dbpass = '';
    
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -292,7 +293,9 @@ foreach ($data as $nid => $item) {
 	$desc = trim($item['body_value'][0]);
 	if (strlen($desc) > 0) {
 	    $desc = str_replace("<p", "\n\n<p", $desc);
-	    $desc = strip_tags(html_entity_decode(htmlspecialchars_decode($desc)));
+	    //$desc = strip_tags(html_entity_decode(htmlspecialchars_decode($desc)));
+	    $desc = trim(preg_replace('/ +/', ' ', preg_replace('/[^A-Za-z0-9 ]/', ' ', urldecode(html_entity_decode(htmlspecialchars_decode(strip_tags($desc)))))));
+
 //	    $doc = new DOMDocument();
 //	    if (! $doc->loadHTML($desc)) {
 //		//bad html
@@ -315,10 +318,12 @@ foreach ($data as $nid => $item) {
 	$dcterms .= '  <dcvalue element="alternative" >' . $title ."</dcvalue>\n";
     }
     foreach ($item['resource_type'] as $type) {
+    $type = preg_replace('/ +/', ' ', preg_replace('/[^A-Za-z0-9 ]/', ' ', urldecode(html_entity_decode(htmlspecialchars_decode($type)))));
 	$dcfields .= '  <dcvalue element="subject">' . $type . "</dcvalue>\n";
 	$dcterms .= '  <dcvalue element="subject">' . $type . "</dcvalue>\n";
     }
     foreach ($item['mterg_terms'] as $term) {
+    $term = preg_replace('/ +/', ' ', preg_replace('/[^A-Za-z0-9 ]/', ' ', urldecode(html_entity_decode(htmlspecialchars_decode($term)))));
 	$dcfields .= '  <dcvalue element="subject">' . $term . "</dcvalue>\n";
 	$dcterms .= '  <dcvalue element="subject">' . $term . "</dcvalue>\n";
     }
