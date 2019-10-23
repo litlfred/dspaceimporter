@@ -1,14 +1,14 @@
 #!/usr/bin/php
 <?php
+ini_set('memory_limit','1024M');
+
+$collection = 'mevi';
 
 
-$collection = 'mhealthEvidenceRight';
-
-
-#$dbhost = '127.0.0.1';
-$dbhost = 'localhost';
+$dbhost = '127.0.0.1';
+#$dbhost = 'localhost';
 $dbuser = 'root';
-$dbpass = 'root';
+$dbpass = 'opalopal';
    
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -32,26 +32,30 @@ $fields = '	nid, title,
 $qry = 'select ' . $fields . '
 
 FROM node
-LEFT JOIN mhealthEvidenceRight.field_data_body ON field_data_body.entity_id = node.nid
-	LEFT  JOIN mhealthEvidenceRight.field_data_field_mterg_terms ON field_data_field_mterg_terms.entity_id = node.nid
-	LEFT  JOIN mhealthEvidenceRight.field_data_pubmed_mesh ON field_data_pubmed_mesh.entity_id = node.nid
-	LEFT  JOIN mhealthEvidenceRight.field_data_pubmed_journal_title ON field_data_pubmed_journal_title.entity_id = node.nid
-	LEFT  JOIN mhealthEvidenceRight.field_data_pubmed_author ON field_data_pubmed_author.entity_id = node.nid
-	LEFT JOIN mhealthEvidenceRight.taxonomy_term_data  as mterg ON field_mterg_terms_tid =  mterg.tid
-	LEFT JOIN mhealthEvidenceRight.taxonomy_term_data  as mesh ON pubmed_mesh_tid =  mesh.tid
-    LEFT JOIN mhealthEvidenceRight.field_data_pubmed_doi ON field_data_pubmed_doi.entity_id = node.nid
-    LEFT JOIN mhealthEvidenceRight.field_data_pubmed_publication_date ON field_data_pubmed_publication_date.entity_id = node.nid
-	LEFT JOIN mhealthEvidenceRight.taxonomy_term_data as journal ON pubmed_journal_title_tid = journal.tid
-	LEFT JOIN mhealthEvidenceRight.taxonomy_term_data as author ON pubmed_author_tid = author.tid
+LEFT JOIN field_data_body ON field_data_body.entity_id = node.nid
+	LEFT  JOIN field_data_field_mterg_terms ON field_data_field_mterg_terms.entity_id = node.nid
+	LEFT  JOIN field_data_pubmed_mesh ON field_data_pubmed_mesh.entity_id = node.nid
+	LEFT  JOIN field_data_pubmed_journal_title ON field_data_pubmed_journal_title.entity_id = node.nid
+	LEFT  JOIN field_data_pubmed_author ON field_data_pubmed_author.entity_id = node.nid
+	LEFT JOIN taxonomy_term_data  as mterg ON field_mterg_terms_tid =  mterg.tid
+	LEFT JOIN taxonomy_term_data  as mesh ON pubmed_mesh_tid =  mesh.tid
+    LEFT JOIN field_data_pubmed_doi ON field_data_pubmed_doi.entity_id = node.nid
+    LEFT JOIN field_data_pubmed_publication_date ON field_data_pubmed_publication_date.entity_id = node.nid
+	LEFT JOIN taxonomy_term_data as journal ON pubmed_journal_title_tid = journal.tid
+	LEFT JOIN taxonomy_term_data as author ON pubmed_author_tid = author.tid
 where node.type = \'pubmed\'
 order by nid
 
 ';
 
 
-$mysqli = new mysqli($dbhost, $dbuser, $dbpass, $collection);
-if ($mysqli->connect_errno){  die("Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error);}
-$mysqli->set_charset('utf8');
+//$mysqli = new mysqli($dbhost, $dbuser, $dbpass, $collection);
+
+$pdo = new PDO("mysql:host=$dbhost;dbname=$collection", $dbuser, $dbpass, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8") );
+$pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+
+//if ($mysqli->connect_errno){  die("Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error);}
+//$mysqli->set_charset('utf8');
 
 
 $filenames = array(
@@ -85,8 +89,8 @@ foreach (explode(",",$fields) as $f) {
 $data =array();
 $nid = false;
 $r = array();
-$result = $mysqli->query($qry);
-while ($row = $result->fetch_assoc()) {
+$result = $pdo->query($qry);
+while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
     if ( $row['nid'] != $nid) {
 	//if new entry new entry so save old one
 	if ($nid) {$data[$nid] = $r;}
