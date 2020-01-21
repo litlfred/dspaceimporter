@@ -20,52 +20,31 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 	$warnings[] =  "Badness on $nid ($errno) at $errline:\n " . trim($errstr) . "\n";
     });
 
-/*$fields = '	nid, title, 
- 		   	body_value, 
-		  	mterg.name as mterg_terms, 
-			mesh.name as mesh_terms,
-    		journal.name as journal_title,
-    		lang.name as lang,
-    		author.name as author,
-		    pubmed_doi_value,
-		    pubmed_publication_date_value as publication_date';
+$fields = array(
+    'nid'=>'nid',
+    'title'=>'title',
+    'body_value'=>'body_value',
+    'mterg.name' => 'mterg_terms',
+    //'mesh.name' => 'mesh_terms',
+    'journal.name'=> 'journal_title',
+    'author.name'=> 'author',
+    'pubmed_doi_value' => 'doi',
+    'date_format(pubmed_publication_date_value,"%Y-%m-%d")'=>'publication_date'
+    );
+$qry = 'select ' ;
 
-$qry = 'select ' . $fields . '
+foreach ($fields as $d=>$n) {
+    $qry .= ' ' . $d . ' as  ' . $n . ',';
+}
+$qry = rtrim($qry,",");
 
-FROM node
-LEFT JOIN field_data_body ON field_data_body.entity_id = node.nid
-	LEFT  JOIN field_data_field_mterg_terms ON field_data_field_mterg_terms.entity_id = node.nid
-	LEFT  JOIN field_data_pubmed_mesh ON field_data_pubmed_mesh.entity_id = node.nid
-	LEFT JOIN field_data_pubmed_language ON field_data_pubmed_language.entity_id = node.nid
-	LEFT  JOIN field_data_pubmed_journal_title ON field_data_pubmed_journal_title.entity_id = node.nid
-	LEFT  JOIN field_data_pubmed_author ON field_data_pubmed_author.entity_id = node.nid
-	LEFT JOIN taxonomy_term_data  as mterg ON field_mterg_terms_tid =  mterg.tid
-	LEFT JOIN taxonomy_term_data  as mesh ON pubmed_mesh_tid =  mesh.tid
-	LEFT JOIN taxonomy_term_data as lang ON pubmed_language_tid = lang.tid
-    LEFT JOIN field_data_pubmed_doi ON field_data_pubmed_doi.entity_id = node.nid
-    LEFT JOIN field_data_pubmed_publication_date ON field_data_pubmed_publication_date.entity_id = node.nid
-	LEFT JOIN taxonomy_term_data as journal ON pubmed_journal_title_tid = journal.tid
-	LEFT JOIN taxonomy_term_data as author ON pubmed_author_tid = author.tid
-where node.type = \'pubmed\' AND node.status=1 AND node.promote=1
-order by nid
-
-';*/
-
-$fields = 'nid, title,
-    body_value,
-	mterg.name as mterg_terms, 
-    lang.name as lang,
-    journal.name as journal_title,
-    pubmed_doi_value as doi,
-    date_format(pubmed_publication_date_value, "%M %d, %Y") as publication_date';
-
-$qry = 'select ' . $fields . '
-
-FROM node
+$qry .= ' FROM node
 	LEFT JOIN field_data_body ON field_data_body.entity_id = node.nid
+	LEFT  JOIN field_data_pubmed_author ON field_data_pubmed_author.entity_id = node.nid
 	LEFT  JOIN field_data_field_mterg_terms ON field_data_field_mterg_terms.entity_id = node.nid
 	LEFT JOIN field_data_pubmed_language ON field_data_pubmed_language.entity_id = node.nid
 	LEFT  JOIN field_data_pubmed_journal_title ON field_data_pubmed_journal_title.entity_id = node.nid
+	LEFT JOIN taxonomy_term_data as author ON pubmed_author_tid = author.tid
 	LEFT JOIN taxonomy_term_data  as mterg ON field_mterg_terms_tid =  mterg.tid
 	LEFT JOIN taxonomy_term_data as lang ON pubmed_language_tid = lang.tid
 	LEFT JOIN taxonomy_term_data as journal ON pubmed_journal_title_tid = journal.tid
@@ -73,6 +52,11 @@ FROM node
     LEFT JOIN field_data_pubmed_publication_date ON field_data_pubmed_publication_date.entity_id = node.nid
 WHERE node.type=\'pubmed\'
 order by nid';
+
+//    LEFT JOIN taxonomy_term_data  as mesh ON pubmed_mesh_tid =  mesh.tid
+//    LEFT  JOIN field_data_pubmed_mesh ON field_data_pubmed_mesh.entity_id = node.nid
+
+
 
 //$mysqli = new mysqli($dbhost, $dbuser, $dbpass, $collection);
 
@@ -100,7 +84,8 @@ $furl = 'https://www.mhealthevidence.org/sites/default/files/';
 
 
 $headers = array();
-foreach (explode(",",$fields) as $f) {
+//foreach (explode(",",$fields) as $f) {
+foreach (array_values($fields) as $f) {
     $f = trim($f);
     if (strlen($f) == 0) {continue;   }
     foreach(explode(' as ',$f) as $p) {
@@ -115,7 +100,13 @@ $data =array();
 $nid = false;
 $r = array();
 $result = $pdo->query($qry);
+var_dump($result);
+echo $qry;
+//$count=0;
 while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
+	/*$count++;
+	if ($count >200)
+		break;*/
     if ( $row['nid'] != $nid) {
 	//if new entry new entry so save old one
 	if ($nid) {
@@ -175,7 +166,8 @@ function get_remote_contents($url) {
 
 
 $zip = new ZipArchive;
-$zipfile = $collection . '_dspace.zip';
+$zipfile = 'mhealthEvidence_dspace.zip';
+//$zipfile = $collection . 'items6_dspace.zip';
 if (file_exists($zipfile)) {unlink($zipfile);}
 if (! $zip->open($zipfile, ZipArchive::CREATE))   { die("could not create zip file $zipfile\n");}
 $got = array();
@@ -192,87 +184,9 @@ foreach ($data as $nid => $item) {
     $main_title =  $item['title'][0];
     $aux_files = array();
     $sources =array();    
-    /*foreach ($filenames as $prefix=>$filetype) {
-	//get files that are referenced locally on the website but not saved in the db so need to retrieve
-	if ($filetype == 'file') {
-	    foreach ($item[$prefix . '_filename'] as $i=>$filename) {
-		if (!$filename) {continue; }//just in case empty values we put int
-		$rurl =$furl . $filename;
-		if (array_key_exists($rurl,$got) && $got[$rurl]) { continue;}
-		echo "\tRetrieving for $prefix: $rurl\n";
-		$rfile = get_remote_contents($rurl);
-		if (!$rfile) {echo "\tWARNING: Could not retrieve $rurl\n";	continue;}
-		$got[$rurl] = true;
-		file_put_contents('files/' . $filename, $rfile);
-		$mime = false;
-		if (array_key_existS($i,$item[$prefix . '_mime'])) {   $mime = $item[$prefix . '_mime'][$i]; }
-		if (!$mime) { $mime = mime_content_type('files/' .  $filename);}
-		if ($item['title']) {
-		    $tmp_title = $item['title'];
-		} else {
-		    $tmp_title  = $filename;
-		}
-		$titles[$filename] = $tmp_title ;
-		$mimes[$filename] = $mime;
-	    }
-	} else if ($filetype == 'auxfile') {
-	    foreach ($item[$prefix . '_filename'] as $i=>$filename) {
-		if (!$filename) {continue; }//just in case empty values we put int
-		$rurl =$furl . $filename;
-		if (array_key_exists($rurl,$got) && $got[$rurl]) { continue;}
-		echo "\tRetrieving for $prefix: $rurl\n";
-		$rfile = get_remote_contents($rurl);
-		if (!$rfile) {echo "\tWARNING: Could not retrieve $rurl\n";	continue;}
-		$got[$rurl] = true;
-		file_put_contents('files/' . $filename, $rfile);
-		$mime = false;
-		if (array_key_existS($i,$item[$prefix . '_mime'])) {   $mime = $item[$prefix . '_mime'][$i]; }
-		if (!$mime) { $mime = mime_content_type('files/' .  $filename);}
-		$aux_files[$filename] = $mime;
-	    }
-	} else if ($filetype == 'link') {
-	    foreach ($item[$prefix . '_url'] as $i => $rurl) {
-		if (!$rurl) {continue; }//just in case empty values we put int
-		if (array_key_exists($rurl,$got) && $got[$rurl]) { continue;}
-		//strip almost everything from url so we can use as filename
-		$rfilename = rtrim(ltrim( preg_replace('/[^\da-z\\.]+/i', '-', explode('#',$rurl,2)[0] ), "-"),"-"); 
-		$tmp_title = $item[$prefix . '_title'][$i];
-		if (!$tmp_title   ) {
-		    $tmp_title = $main_title;
-		    if (!$tmp_title) {
-			$tmp_title = $rfilename;
-		    }
-		}
-		echo "\tRetrieving for $prefix: $rurl\n";
-		$rfile = get_remote_contents($rurl);
-		if (!$rfile) {echo "\tWARNING: Could not retrieve $rurl\n"; continue;}
-		if (!$tmp_title || !$rurl) {   echo "\tWARNING: bad title or URL ($tmp_title/$rurl)\n";continue;}
-
-		$got[$rurl] = true;
-		file_put_contents('files/' .  $rfilename,$rfile);
-		$mime = mime_content_type('files/' .  $rfilename);
-		echo "\tRetrieved $mime from $rurl\n";
-		if ($mime == 'text/html') {
-		    echo "\tConverting to PDF: $rurl \n";
-		    //let's also try and get the PDF version
-		    $out = array();
-		    $ret = false;
-		    $pdffilename = $rfilename . ".pdf";
-		    $pdfout = "files/$pdffilename";
-		    exec("wkhtmltopdf " . escapeshellarg($rurl) . " " . escapeshellarg($pdfout) . " 2> /dev/null");
-		    if (is_file($pdfout) && filesize($pdfout) >0) { //success
-			$mimes[$pdffilename] = 'application/pdf';
-			$titles[$pdffilename] = $tmp_title;
-		    } else {
-			echo "\tWARNING: Could not convert to PDF ($ret): $rurl \n"; print_r($out);
-		    }
-		}
-		$sources[] = $rurl;
-		$mimes[$rfilename] = $mime;
-		$titles[$rfilename] = $tmp_title;
-	    }
-	}
-    }*/
+   
+    $main_title = str_replace("&","And", $main_title);
+    $main_title = str_replace("<","Under", $main_title);
     if (!$main_title && count($titles) == 0) {	echo "\tWARNING: no titles found for $nid <$main_title>\n";  continue; }
     //if (count($mimes) == 0) {	echo "\tWARNING: no mime types found for $nid\n"; continue; }
 
@@ -290,6 +204,8 @@ foreach ($data as $nid => $item) {
 	$desc = trim($item['body_value'][0]);
 	if (strlen($desc) > 0) {
 	    $desc = str_replace("<p", "\n\n<p", $desc);
+	    $desc = str_replace("&","And", $desc);
+	    $desc = str_replace("<", "Under", $desc);
 	    //$desc = strip_tags(html_entity_decode(htmlspecialchars_decode($desc)));
 	    $desc = trim(preg_replace('/ +/', ' ', preg_replace('/[^A-Za-z0-9 ]/', ' ', urldecode(html_entity_decode(htmlspecialchars_decode(strip_tags($desc)))))));
 
@@ -301,6 +217,8 @@ foreach ($data as $nid => $item) {
     }
     if (count($item['journal_title']) > 0) {
 	$journal = $item['journal_title'][0];
+	$journal = str_replace("&","And", $journal);
+	$journal = str_replace("<","Under", $journal);
     }
     //see https://wiki.duraspace.org/display/DSDOC5x/Metadata+and+Bitstream+Format+Registries for dublin core fields
     //example $item['resource_type'] = array('Tools & Guides')  dc.subject.type
@@ -313,6 +231,8 @@ foreach ($data as $nid => $item) {
 	    continue;
 	}
 	if (!is_string($title)) { print_r($item); print_r($titles); die("BADNESS = $nid\n");}
+    $title = str_replace("&","And", $title);
+    $title = str_replace("<","Under", $title);
 	$dcfields .= '  <dcvalue element="title" qualifier="alternative" >' . $title ."</dcvalue>\n";
 	$dcterms .= '  <dcvalue element="alternative" >' . $title ."</dcvalue>\n";
     }
@@ -321,36 +241,44 @@ foreach ($data as $nid => $item) {
 	$dcfields .= '  <dcvalue element="subject">' . $type . "</dcvalue>\n";
 	$dcterms .= '  <dcvalue element="subject">' . $type . "</dcvalue>\n";
     }*/
-    foreach ($item['mterg_terms'] as $term) {
+    foreach (array_unique($item['mterg_terms']) as $term) {
     //$term = preg_replace('/ +/', ' ', preg_replace('/[^A-Za-z0-9 ]/', ' ', urldecode(html_entity_decode(htmlspecialchars_decode($term)))));
+    	$term = str_replace("&","And", $term);
+    	$term = str_replace("<","Under", $term);
 	$dcfields .= '  <dcvalue element="subject">' . $term . "</dcvalue>\n";
 	$dcterms .= '  <dcvalue element="subject">' . $term . "</dcvalue>\n";
     }
 
-    /*foreach ($item['mesh_terms'] as $term) {
+    /*foreach (array_unique($item['mesh_terms']) as $term) {
     //$term = preg_replace('/ +/', ' ', preg_replace('/[^A-Za-z0-9 ]/', ' ', urldecode(html_entity_decode(htmlspecialchars_decode($term)))));
-	$dcfields .= '  <dcvalue element="subject">' . $term . "</dcvalue>\n";
+    	$term = str_replace("&","And", $term);
+    	$term = str_replace("<","Under", $term);
+	$dcfields .= '  <dcvalue element="subject" qualifier="mesh">' . $term . "</dcvalue>\n";
 	$dcterms .= '  <dcvalue element="subject">' . $term . "</dcvalue>\n";
     }*/
 
-    foreach ($item['author'] as $i=>$ln) {
+    foreach (array_unique($item['author']) as $i=>$ln) {
 	if (!$ln) {continue;}
-	if (array_key_exists($i,$item['author']) && strlen($fn = trim($item['author'][$i])) > 0) {
-	    $ln  .= ", " . $fn;
-	}
+	/*if (array_key_exists($i,$item['author']) && strlen($fn = trim($item['author'][$i])) > 0) {
+	    //$ln  .= ", " . $fn;
+	}*/
 	$dcfields .=  '  <dcvalue element="contributor" qualifier="author">' . $ln . "</dcvalue>\n";
 	$dcterms .=  '  <dcvalue element="contributor">' . $ln . "</dcvalue>\n";
+    }
+    if ($year) {
+	$dcfields .= '  <dcvalue element="date" qualifier="issued">' . $year . "</dcvalue>\n" ;
     }
     if ($desc) {
 	$dcfields .=  '  <dcvalue element="description" qualifier="abstract">' . $desc . "</dcvalue>\n";
 	$dcterms .=  '  <dcvalue element="abstract">' . $desc . "</dcvalue>\n";	
     }
-    if ($year) {
-	$dcfields .= '  <dcvalue element="date" qualifier="issued">' . $year . "</dcvalue>\n" ;
-    }
     if ($doi) {
-    	$dcfields .=  '  <dcvalue element="identifier" qualifier="doi">' . $prefix.$doi . "</dcvalue>\n";
-		$dcterms .=  '  <dcvalue element="identifier">' . $prefix.$doi . "</dcvalue>\n";	
+    	$dcfields .=  '  <dcvalue element="identifier" qualifier="uri">' . $prefix . $doi . "</dcvalue>\n";
+		$dcterms .=  '  <dcvalue element="identifier">' . $prefix . $doi . "</dcvalue>\n";	
+    }
+    if ($journal) {
+    	$dcfields .=  '  <dcvalue element="relation" qualifier="uri">' . $journal . "</dcvalue>\n";
+		$dcterms .=  '  <dcvalue element="relation">' . $journal . "</dcvalue>\n";	
     }
     /*foreach ($aux_files as $filename => $mime) {
 	$dcterms .=  '  <dcvalue element="relation">' . $filename . "</dcvalue>\n";	
@@ -365,6 +293,8 @@ foreach ($data as $nid => $item) {
     $zip->addFromString($dir . '/dublin_core.xml', $dcfields);
     $zip->addFromString($dir . '/metadata_dcterms.xml', $dcterms);
     
+      $zip->addFromString($dir . '/contents', "\n");
+
 
     /*$file_list = array_unique(array_merge(array_keys($titles),array_keys($aux_files)));
     $zip->addFromString($dir . '/contents',implode($file_list,"\n") . "\n");

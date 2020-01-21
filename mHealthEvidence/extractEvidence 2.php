@@ -1,9 +1,9 @@
 #!/usr/bin/php
 <?php
+ini_set('memory_limit','4096M');
 
-
-$collection = 'mhealthevidence';
-#$collection = 'mhealthknowledge';
+#$collection = 'mevi';
+$collection = 'mhealthevidenceRight';
 
 #$dbhost = '127.0.0.1';
 $dbhost = 'localhost';
@@ -20,77 +20,42 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 	$warnings[] =  "Badness on $nid ($errno) at $errline:\n " . trim($errstr) . "\n";
     });
 
-$fields = 'nid, title, 
-body_value, 
-field_bio_value  , 
-   ci.filename as cover_image_filename, ci.uri as cover_image_uri, ci.filemime as cover_image_mime, ci.filesize as cover_image_size,  ci.timestamp as cover_image_timestamp, ci.type as cover_image_type,
-field_first_name_value, 
-    ifld.filename as image_field_filename, ifld.uri as image_field_uri, ifld.filemime as image_field_mime, ifld.filesize as image_field_size, ifld.timestamp as image_field_timestamp, ifld.type as image_field_type,
-    ifile.filename as image_file_filename, ifile.uri as image_file_uri, ifile.filemime as image_file_mime, ifile.filesize as image_file_size, ifile.timestamp as image_file_timestamp, ifile.type as image_file_type,
- lang.name as lang, 
-field_last_name_value, 
-field_link_url,  field_link_title,
-field_link_linkedin_url,  field_link_linkedin_title,
-field_link_website_url,  field_link_website_title,
- mterg.name as mterg_terms , 
-field_organization_title_value, 
-field_outside_link_url,  field_outside_link_title,
-field_post_author_nid,
- ptags.name as post_tags ,
- pyear.name as publication_year,
-field_resource_file_description as resource_file_description, 
-   rf.filename as resource_file_filename, rf.uri  as resource_file_uri, rf.filemime as resource_file_mime, rf.filesize as resource_file_size, rf.timestamp as resource_file_timestamp, rf.type as resource_file_type,
-  rtype.name as resource_type,
- tags.name as tags';
-$qry = 'select ' . $fields . '
+$fields = '	nid, title, 
+ 		   	body_value, 
+		  	mterg.name as mterg_terms, 
+			mesh.name as mesh_terms,
+    		journal.name as journal_title,
+    		author.name as author,
+		    pubmed_doi_value,
+		    pubmed_publication_date_value as publication_date';
 
+$qry = 'select ' . $fields . '
 
 FROM node
 LEFT JOIN field_data_body ON field_data_body.entity_id = node.nid
- LEFT JOIN field_data_field_author_photo ON field_data_field_author_photo.entity_id = node.nid
- LEFT JOIN field_data_field_bio ON field_data_field_bio.entity_id = node.nid
- LEFT JOIN field_data_field_countries ON field_data_field_countries.entity_id = node.nid
- LEFT JOIN field_data_field_country ON field_data_field_country.entity_id = node.nid
- LEFT JOIN field_data_field_cover_image ON field_data_field_cover_image.entity_id = node.nid
- LEFT JOIN field_data_field_files ON field_data_field_files.entity_id = node.nid
- LEFT JOIN field_data_field_first_name ON field_data_field_first_name.entity_id = node.nid
- LEFT JOIN field_data_field_guest ON field_data_field_guest.entity_id = node.nid
- LEFT JOIN field_data_field_image_date ON field_data_field_image_date.entity_id = node.nid
- LEFT JOIN field_data_field_image_field ON field_data_field_image_field.entity_id = node.nid
- LEFT JOIN field_data_field_image_file ON field_data_field_image_file.entity_id = node.nid
- LEFT JOIN field_data_field_language ON field_data_field_language.entity_id = node.nid
- LEFT JOIN field_data_field_last_name ON field_data_field_last_name.entity_id = node.nid
- LEFT JOIN field_data_field_link ON field_data_field_link.entity_id = node.nid
- LEFT JOIN field_data_field_link_linkedin ON field_data_field_link_linkedin.entity_id = node.nid
- LEFT JOIN field_data_field_link_website ON field_data_field_link_website.entity_id = node.nid
- LEFT  JOIN field_data_field_mterg_terms ON field_data_field_mterg_terms.entity_id = node.nid
- LEFT JOIN field_data_field_organization_title ON field_data_field_organization_title.entity_id = node.nid
- LEFT JOIN field_data_field_outside_link ON field_data_field_outside_link.entity_id = node.nid
- LEFT JOIN field_data_field_post_author ON field_data_field_post_author.entity_id = node.nid
- LEFT JOIN field_data_field_post_tags ON field_data_field_post_tags.entity_id = node.nid
- LEFT JOIN field_data_field_publication_year ON field_data_field_publication_year.entity_id = node.nid
- LEFT JOIN field_data_field_resource_file ON field_data_field_resource_file.entity_id = node.nid
- LEFT JOIN field_data_field_resource_type ON field_data_field_resource_type.entity_id = node.nid
- LEFT JOIN field_data_field_tags ON field_data_field_tags.entity_id = node.nid
- LEFT JOIN file_managed as rf ON  field_data_field_resource_file.field_resource_file_fid = rf.fid
- LEFT JOIN file_managed as ifile ON  field_data_field_image_file.field_image_file_fid = ifile.fid
- LEFT JOIN file_managed as ifld ON  field_data_field_image_field.field_image_field_fid = ifld.fid
-LEFT JOIN file_managed as ci ON  field_data_field_cover_image.field_cover_image_fid = ci.fid
-LEFT JOIN taxonomy_term_data as tags on field_tags_tid =  tags.tid
- LEFT JOIN taxonomy_term_data as rtype on  field_resource_type_tid  = rtype.tid
-  LEFT JOIN taxonomy_term_data as pyear on  field_publication_year_tid = pyear.tid
-   LEFT JOIN taxonomy_term_data as ptags on  field_post_tags_tid = ptags.tid
-   LEFT JOIN taxonomy_term_data  as mterg on field_mterg_terms_tid =  mterg.tid
-   LEFT JOIN taxonomy_term_data  as lang on field_language_tid = lang.tid
-where node.type = \'resource\'
+	LEFT  JOIN field_data_field_mterg_terms ON field_data_field_mterg_terms.entity_id = node.nid
+	LEFT  JOIN field_data_pubmed_mesh ON field_data_pubmed_mesh.entity_id = node.nid
+	LEFT  JOIN field_data_pubmed_journal_title ON field_data_pubmed_journal_title.entity_id = node.nid
+	LEFT  JOIN field_data_pubmed_author ON field_data_pubmed_author.entity_id = node.nid
+	LEFT JOIN taxonomy_term_data  as mterg ON field_mterg_terms_tid =  mterg.tid
+	LEFT JOIN taxonomy_term_data  as mesh ON pubmed_mesh_tid =  mesh.tid
+    LEFT JOIN field_data_pubmed_doi ON field_data_pubmed_doi.entity_id = node.nid
+    LEFT JOIN field_data_pubmed_publication_date ON field_data_pubmed_publication_date.entity_id = node.nid
+	LEFT JOIN taxonomy_term_data as journal ON pubmed_journal_title_tid = journal.tid
+	LEFT JOIN taxonomy_term_data as author ON pubmed_author_tid = author.tid
+where node.type = \'pubmed\'
 order by nid
 
 ';
 
 
-$mysqli = new mysqli($dbhost, $dbuser, $dbpass, $collection);
-if ($mysqli->connect_errno){  die("Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error);}
-$mysqli->set_charset('utf8');
+//$mysqli = new mysqli($dbhost, $dbuser, $dbpass, $collection);
+
+$pdo = new PDO("mysql:host=$dbhost;dbname=$collection", $dbuser, $dbpass, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8") );
+$pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+
+//if ($mysqli->connect_errno){  die("Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error);}
+//$mysqli->set_charset('utf8');
 
 
 $filenames = array(
@@ -105,7 +70,7 @@ $filenames = array(
     );
     
 $furl = 'https://www.' . $collection . '.org/sites/default/files/';
-$furl = 'https://www.mhealthknowledge.org/sites/default/files/';
+$furl = 'https://www.mhealthevidence.org/sites/default/files/';
 
 
 
@@ -124,11 +89,14 @@ foreach (explode(",",$fields) as $f) {
 $data =array();
 $nid = false;
 $r = array();
-$result = $mysqli->query($qry);
-while ($row = $result->fetch_assoc()) {
+$result = $pdo->query($qry);
+while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
     if ( $row['nid'] != $nid) {
 	//if new entry new entry so save old one
-	if ($nid) {$data[$nid] = $r;}
+	if ($nid) {
+		if (array_key_exists('body_value',$r) && count($r['body_value'] >0 )) { $r['body_value'] = array($r['body_value'][0]);}
+		$data[$nid] = $r;
+	}
 	//now reset for new one
 	$nid  = $row['nid'];
 	echo "Consolidating data for $nid\n";
@@ -182,8 +150,7 @@ function get_remote_contents($url) {
 
 
 $zip = new ZipArchive;
-//$zipfile = $collection . '_dspace.zip';
-$zipfile =  'mhealthKnowledge_dspace.zip';
+$zipfile = $collection . '_dspace.zip';
 if (file_exists($zipfile)) {unlink($zipfile);}
 if (! $zip->open($zipfile, ZipArchive::CREATE))   { die("could not create zip file $zipfile\n");}
 $got = array();
@@ -288,8 +255,11 @@ foreach ($data as $nid => $item) {
     if ((count($item['lang']) > 0) && ($t_lang = $item['lang'][0]) && (array_key_exists($t_lang,$lang_map))){
 	$lang =$lang_map[$t_lang];
     }
-    if (count($item['publication_year']) > 0) {
+    /*if (count($item['publication_year']) > 0) {
 	$year = $item['publication_year'][0];
+    }*/
+    if (count($item['publication_date']) > 0) {
+	$year = $item['publication_date'][0];
     }
     if (count($item['body_value']) > 0) {
 	$desc = trim($item['body_value'][0]);
@@ -298,17 +268,10 @@ foreach ($data as $nid => $item) {
 	    //$desc = strip_tags(html_entity_decode(htmlspecialchars_decode($desc)));
 	    $desc = trim(preg_replace('/ +/', ' ', preg_replace('/[^A-Za-z0-9 ]/', ' ', urldecode(html_entity_decode(htmlspecialchars_decode(strip_tags($desc)))))));
 
-//	    $doc = new DOMDocument();
-//	    if (! $doc->loadHTML($desc)) {
-//		//bad html
-//		echo "\tWARNING bad HTML in abstract, converting to plain text\n";
-//	    }
 	}
     }
     //see https://wiki.duraspace.org/display/DSDOC5x/Metadata+and+Bitstream+Format+Registries for dublin core fields
     //example $item['resource_type'] = array('Tools & Guides')  dc.subject.type
-    $main_title = str_replace("&","And", $main_title);
-    $main_title = str_replace("<", "Under", $main_title); 
     $dcfields = '  <dcvalue element="title" qualifier="none" language="' . $lang . '">' .$main_title  ."</dcvalue>\n";
     $dcterms = '  <dcvalue element="title"  language="' . $lang . '">' . $main_title ."</dcvalue>\n";
     $count =0;
@@ -318,37 +281,35 @@ foreach ($data as $nid => $item) {
 	    continue;
 	}
 	if (!is_string($title)) { print_r($item); print_r($titles); die("BADNESS = $nid\n");}
-    $title = str_replace("&","And", $title);
-    $title = str_replace("<", "Under", $title);
 	$dcfields .= '  <dcvalue element="title" qualifier="alternative" >' . $title ."</dcvalue>\n";
 	$dcterms .= '  <dcvalue element="alternative" >' . $title ."</dcvalue>\n";
     }
     foreach ($item['resource_type'] as $type) {
     //$type = preg_replace('/ +/', ' ', preg_replace('/[^A-Za-z0-9 ]/', ' ', urldecode(html_entity_decode(htmlspecialchars_decode($type)))));
-    $type = str_replace("&","And", $type);
-    $type = str_replace("<", "Under", $type);
 	$dcfields .= '  <dcvalue element="subject">' . $type . "</dcvalue>\n";
 	$dcterms .= '  <dcvalue element="subject">' . $type . "</dcvalue>\n";
     }
     foreach ($item['mterg_terms'] as $term) {
     //$term = preg_replace('/ +/', ' ', preg_replace('/[^A-Za-z0-9 ]/', ' ', urldecode(html_entity_decode(htmlspecialchars_decode($term)))));
-    $term = str_replace("&","And", $term);
-    $term = str_replace("<", "Under", $term);
 	$dcfields .= '  <dcvalue element="subject">' . $term . "</dcvalue>\n";
 	$dcterms .= '  <dcvalue element="subject">' . $term . "</dcvalue>\n";
     }
 
-    foreach ($item['field_last_name_value'] as $i=>$ln) {
+    foreach ($item['mesh_terms'] as $term) {
+    //$term = preg_replace('/ +/', ' ', preg_replace('/[^A-Za-z0-9 ]/', ' ', urldecode(html_entity_decode(htmlspecialchars_decode($term)))));
+	$dcfields .= '  <dcvalue element="subject">' . $term . "</dcvalue>\n";
+	$dcterms .= '  <dcvalue element="subject">' . $term . "</dcvalue>\n";
+    }
+
+    foreach ($item['author'] as $i=>$ln) {
 	if (!$ln) {continue;}
-	if (array_key_exists($i,$item['field_first_name_value']) && strlen($fn = trim($item['field_first_name_value'][$i])) > 0) {
+	if (array_key_exists($i,$item['author']) && strlen($fn = trim($item['author'][$i])) > 0) {
 	    $ln  .= ", " . $fn;
 	}
 	$dcfields .=  '  <dcvalue element="contributor" qualifier="author">' . $ln . "</dcvalue>\n";
 	$dcterms .=  '  <dcvalue element="contributor">' . $ln . "</dcvalue>\n";
     }
     if ($desc) {
-    $desc = str_replace("&","And", $desc);
-    $desc = str_replace("<", "Under", $desc);
 	$dcfields .=  '  <dcvalue element="description" qualifier="abstract">' . $desc . "</dcvalue>\n";
 	$dcterms .=  '  <dcvalue element="abstract">' . $desc . "</dcvalue>\n";	
     }
