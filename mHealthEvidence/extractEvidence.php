@@ -50,9 +50,10 @@ $qry .= ' FROM node
 	LEFT JOIN taxonomy_term_data as journal ON pubmed_journal_title_tid = journal.tid
     LEFT JOIN field_data_pubmed_doi ON field_data_pubmed_doi.entity_id = node.nid
     LEFT JOIN field_data_pubmed_publication_date ON field_data_pubmed_publication_date.entity_id = node.nid
-WHERE node.type=\'pubmed\'
+WHERE node.type=\'pubmed\' AND node.nid BETWEEN 670000 and 680000
 order by nid';
 
+// items  564134 and 597190 and 607478 and 699998 and 700000 and 708166
 //    LEFT JOIN taxonomy_term_data  as mesh ON pubmed_mesh_tid =  mesh.tid
 //    LEFT  JOIN field_data_pubmed_mesh ON field_data_pubmed_mesh.entity_id = node.nid
 
@@ -166,7 +167,7 @@ function get_remote_contents($url) {
 
 
 $zip = new ZipArchive;
-$zipfile = 'mhealthEvidence_dspace.zip';
+$zipfile = 'mhealthEvidence_items6_4_dspace.zip';
 //$zipfile = $collection . 'items6_dspace.zip';
 if (file_exists($zipfile)) {unlink($zipfile);}
 if (! $zip->open($zipfile, ZipArchive::CREATE))   { die("could not create zip file $zipfile\n");}
